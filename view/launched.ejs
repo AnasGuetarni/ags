@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<%- include('./partials/head'); -%>
+		<script type="text/javascript" src="../../js/Chart.min.js"></script>
+		<script src="../../js/stats.js"></script>
+	</head>
+
+	<body id="launched">
+		<div class="blocQuestion">
+			<button type="button" id="btnQuitterDiapo" class="bouton suppr">Quitter</button>
+
+			<h2 id="numQuestion" class="numQuestion"></h2>
+			<h1 id="nomQuestion" class="question"></h1>
+
+			<ol class="listeReponses" type="A">
+			</ol>
+
+			<div class="commands">
+				<button type="button" id="nextQuestion" class="bouton">></button>
+				<button type="button" id="showAnswer" class="bouton">Réponse</button>
+				<button type="button" id="buttonStats" class="bouton" href="#stats">Afficher les stats</button>
+				<button type="button" id="previousQuestion" class="bouton"><</button>
+				<div type="button" id="nbReponses" class="bouton">Aucune réponse</div>
+			</div>
+
+			<div class="stats" name="stats">
+				<canvas id="barChart"></canvas>
+			</div>
+		</div>
+	</body>
+	<script>
+
+
+	// Variables
+	var numQuestion = 1;
+	var idQuestion;
+	var nbQuestion;
+	var idGoodAnswer;
+	var displayStat = false;
+	var listeReponses;
+	var q;
+	var myBarChart;
+
+    // Chargement du JS
+	$(document).ready(function(questions){
+
+		// ========= INIT =========
+		$('.stats').hide();
+
+		// Init Chart
+
+		console.log(listeReponses);
+
+		var data = {
+		    labels: [],
+		    datasets: [
+				{
+		            label: "Nombre de réponses",
+					backgroundColor: [
+		                'rgba(255, 99, 132, 0.2)',
+		                'rgba(54, 162, 235, 0.2)',
+		                'rgba(255, 206, 86, 0.2)',
+		                'rgba(75, 192, 192, 0.2)',
+		                'rgba(153, 102, 255, 0.2)',
+		                'rgba(255, 159, 64, 0.2)'
+		            ],
+		            borderColor: [
+		                'rgba(255,99,132,1)',
+		                'rgba(54, 162, 235, 1)',
+		                'rgba(255, 206, 86, 1)',
+		                'rgba(75, 192, 192, 1)',
+		                'rgba(153, 102, 255, 1)',
+		                'rgba(255, 159, 64, 1)'
+		            ],
+		            borderWidth: 2,
+		            data: []
+				}
+			]
+		};
+
+		var options = {
+			responsive: true,
+			scales: {
+		        yAxes: [{
+		            ticks: {
+		                min: 0,
+						stepSize: 10
+		            }
+		        }]
+		    },
+			legend: {
+				display: false
+			}
+		};
+
+		ctx = document.getElementById('barChart');
+
+		// Drawing Chart
+		myBarChart = new Chart(ctx, {
+			type: 'bar',
+			data: data,
+			options: options
+		});
+
+		// loading questions
+		var idSession = <%- JSON.stringify(idSession) -%>;
+		var questions = <%- JSON.stringify(questions) -%>;
+		q = questions;
+		nbQuestion = questions.length;
+
+		$('#previousQuestion').attr("disabled", true);
+		if (questions.length == 1) {
+			$('#nextQuestion').attr("disabled", true);
+		}
+
+		loadQuestion(numQuestion, nbQuestion);
+
+		// ========= LEAVE EVENT ========= //
+		$('#btnQuitterDiapo').click(function(){
+			socket.emit('req_stop_questionnaire', idSession);
+			socket.on('res_stop_questionnaire', function(){
+				document.location.href="../../admin";
+			});
+		});
+
+		jQuery(window).bind("beforeunload", function() {
+				socket.emit('req_stop_questionnaire', idSession);
+		    }
+		);
+
+		// ========= KEY PRESS ========= //
+		$(window).keydown(function (e){
+		    if(e.keyCode == 39) // RIGHT
+				nextQuestion();
+		    else if(e.keyCode == 37) // LEFT
+		    	previousQuestion();
+		});
+		// ========= DISPLAY NEXT AND PREV ========= //
+		$('#previousQuestion').click(function(){
+			$('#nbAnswer').empty();
+			previousQuestion();
+		});
+		// NEXT
+		$('#nextQuestion').click(function(){
+			$('#nbAnswer').empty();
+			nextQuestion();
+		});
+		$('#showAnswer').click(function(){
+			$('#goodAnswer').toggleClass('goodAnswer');
+		});
+
+		// Display stats
+		function scrollToAnchor(name) {
+		    var elem = $("div[name='"+ name +"']");
+		    $('html,body').animate({scrollTop: elem.offset().top},'slow');
+		}
+
+		$('#buttonStats').click(function(){
+			if (displayStat){
+				$('.stats').hide();
+				$('.listeReponses').show();
+				$('#buttonStats').text('Afficher les stats');
+				displayStat = false;
+			} else {
+				$('.stats').show();
+				$('#buttonStats').text('Masquer les stats');
+				displayStat = true;
+				scrollToAnchor('stats');
+			}
+		});
+
+		// ========= FUNCTIONS ========= //
+		function loadQuestion(numQuestion, nbQuestions){
+			$('.listeReponses').empty();
+			idQuestion = q[numQuestion-1].ID_QUESTION;
+			$('#numQuestion').empty().append("Question " + numQuestion + "/" + nbQuestions);
+			$('#nomQuestion').empty().append(q[numQuestion-1].NOM_QUESTION);
+			idGoodAnswer = q[numQuestion-1].ID_REPONSE_BONNE;
+			loadAnswers(idQuestion);
+		}
+		function loadAnswers(idQuestion){
+			// Chargement reponse par question
+			socket.emit('req_answer_by_idQuestion', idQuestion);
+			socket.on('res_answer_by_idQuestion', function(data){
+				$('.listeReponses').empty();
+				listeReponses = [];
+				for(var rep in data){
+					listeReponses.push(data[rep].NOM_REPONSE);
+					if (data[rep].ID_REPONSE == idGoodAnswer){
+						$('.listeReponses').append('<li id="goodAnswer" class="reponse">' + data[rep].NOM_REPONSE + '</li>');
+					} else {
+						$('.listeReponses').append('<li class="reponse">' + data[rep].NOM_REPONSE + '</li>');
+					}
+				}
+			});
+		}
+
+		function nextQuestion(){
+			$('#nbReponses').text('Aucune réponse');
+			$('#buttonStats').text('Afficher les stats');
+			$('.stats').hide();
+			if (numQuestion < nbQuestion){
+				numQuestion++;
+				loadQuestion(numQuestion, nbQuestion);
+				$('.listeReponses').show();
+			}
+			refreshDisplayPrevNext();
+		}
+
+		function previousQuestion(){
+			$('#nbReponses').text('Aucune réponse');
+			$('#buttonStats').text('Afficher les stats');
+			$('.stats').hide();
+			if (numQuestion > 1){
+				numQuestion--;
+				loadQuestion(numQuestion, nbQuestion);
+				$('.listeReponses').show();
+			}
+			refreshDisplayPrevNext();
+		}
+
+		function refreshDisplayPrevNext(){
+			// Bouton précédent
+			if (numQuestion<=1) $('#previousQuestion').attr("disabled", true);
+			else $('#previousQuestion').attr("disabled", false);
+			// Bouton suivant
+			if (numQuestion>=nbQuestion) $('#nextQuestion').attr("disabled", true);
+			else $('#nextQuestion').attr("disabled", false);
+		}
+
+	});
+
+	socket.on('send_stats', function(result){
+    	var nbAnswer = 0;
+
+    	// Nombre de réponses
+    	for(var rep in result){
+    		nbAnswer += result[rep].NB_SMS;
+    	}
+    	if (nbAnswer == 0) $('#nbReponses').text("Aucune réponse");
+    	else if (nbAnswer == 1) $('#nbReponses').text("1 réponse");
+    	else $('#nbReponses').text(nbAnswer + " réponses");
+
+		myBarChart.data.labels = nbLabels(listeReponses);
+		myBarChart.data.datasets[0].data = updateChart(listeReponses, result);
+		myBarChart.update();
+	});
+
+	</script>
+</html>

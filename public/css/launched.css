@@ -1,0 +1,68 @@
+#launched .bouton {
+	margin-right: 20px;
+	margin-left: 0;
+}
+
+#launched #nbReponses {
+	line-height: 50px;
+	background-color: #FFF;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+	cursor: default;
+}
+
+#launched .blocQuestion {
+	margin: 30px;
+	background-color: #FFF;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+}
+
+li {
+	list-style-position: inside;
+}
+
+.numQuestion {
+	height: 70px;
+	padding: 30px 40px 0;
+	font-size: 30px;
+}
+
+.question {
+	height: 90px;
+	padding: 20px 40px;
+	font-size: 40px;
+}
+
+#launched .listeReponses {
+	height: calc(100% - 250px);
+	padding: 20px;
+	font-size: 30px;
+}
+
+	#launched .listeReponses li {
+		padding: 10px 20px;
+		border-radius: 2px;
+		color: #000;
+		transition: all .5s;
+	}
+
+.goodAnswer {
+	background-color: #2ECC71;
+	color: #FFF !important;
+}
+
+.commands {
+	position: relative;
+	bottom: 0;
+	width: 100%;
+	height: 90px;
+}
+
+.stats {
+	width: 90%;
+	margin: auto;
+}
+
+.stats canvas {
+	width: 45%;
+	display: inline-block;
+}
